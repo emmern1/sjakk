@@ -1,10 +1,13 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
+import Brett from './Brett.js'
+
+
 
 
 
 
 ReactDOM.render(
-	<div>yoyo</div>,
+	<Brett/>,
 	document.getElementById('root')
 );
