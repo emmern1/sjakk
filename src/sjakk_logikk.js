@@ -93,13 +93,23 @@ var Game = {
 		var [x1, y1] = this.coordinates(sq1);
 		var [x2, y2] = this.coordinates(sq2);
 		
-		/*
-		if (this.board[x][ty] != null) {
-			this.captured.push(this.board[tx][ty]);
-		}*/
-		this.board[x2][y2] = this.board[x1][y1];
-		this.board[x2][y2].hasMoved = true;
+		var piece1 = this.board[x1][y1];
+		var piece2 = this.board[x2][y2];
+		this.board[x2][y2] = piece1;
 		this.board[x1][y1] = null;
+		if (this.inCheck(this.turn)) { //not legal after all!! rollback!
+			this.board[x2][y2] = piece2;
+			this.board[x1][y1] = piece1;
+			this.capture = false;
+			return false;
+		}
+		piece1.hasMoved = true;
+		if (this.capture) {
+			var [x, y] = this.passantCapped;
+			this.board[x][y] = null;
+		}
+		this.capture = false;
+
 		this.turn = (this.turn+1) % 2;
 		if (!this.fresh) 
 			this.passant = null;
@@ -154,7 +164,7 @@ var Game = {
 			case PieceType.Knight:
 				return this.legalKnight(dx, dy);
 		}
-		console.log("in the way:", this.inTheWay(sq1, sq2));
+		
 		return (!this.inTheWay(sq1, sq2) && legal);
 	},
 
@@ -211,7 +221,8 @@ var Game = {
 				return true;
 			if (this.passant == y2+""+x2) {
 				//TODO: save capture and execute later in movePiece function
-				this.board[x2-direction][y2] = null;
+				this.capture = true;
+				this.passantCapped = [x2-direction, y2];
 				return true;
 			}
 		} 
@@ -241,17 +252,23 @@ var Game = {
 	},
 	//lazy bruteforce
 	inCheck: function(color) {
+		var tmp = this.turn;
+		this.turn = (color+1) % 2;
 		var [x, y] = this.findKing(color);
-		var sq1 = String.fromCharCode(y) + (x+1);
-		var sq2;
+		var sq2 = String.fromCharCode(y+97) + (x+1);
+		var sq1;
 		for (var i=0; i < 8; i++)
 			for (var j=0; j < 8; j++)
 				if (this.board[i][j] != null && this.board[i][j].color != color) {
-					sq2 = String.fromCharCode(j) + (i+1);
-					if (this.legalMove(sq1, sq2)) //an opponents piece can attack king!!
+					sq1 = String.fromCharCode(j+97) + (i+1);
+					if (this.legalMove(sq1, sq2))  //an opponents piece can attack king!!
+					{
+						this.turn = tmp;
 						return true;
+					}
 				}
 
+		this.turn = tmp;
 		return false;
 	},
 
@@ -264,6 +281,8 @@ var Game = {
 	},
 
 	printBoard: function() {
+		console.log("turn:    ", this.turn == 0 ? "white":"black");
+		console.log("in check:", this.inCheck(this.turn));
 		for (var i=7; i >= 0; i--) {
 			console.log("");
 			for (var j=0; j < 8; j++) {
