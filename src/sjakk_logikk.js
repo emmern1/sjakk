@@ -15,6 +15,7 @@ var PieceType = {
 function Piece(type, color) {
 	this.type = type;
 	this.color = color;
+	this.hasMoved = false;
 	this.fen = function() {
 		if (this.color == Color.black)
 			return this.type.toLowerCase();
@@ -31,6 +32,8 @@ var Game = {
 	captured: [],
 	history: [],
 	turn: Color.white,
+	passant: null,
+	fresh: false,
 
 	init:function() {
 		var b = clearBoard();
@@ -84,6 +87,7 @@ var Game = {
 
 	},
 	movePiece:function(sq1, sq2) {
+		this.fresh = false;
 		if (!this.legalMove(sq1, sq2)) return false;
 
 		var [x1, y1] = this.coordinates(sq1);
@@ -94,8 +98,11 @@ var Game = {
 			this.captured.push(this.board[tx][ty]);
 		}*/
 		this.board[x2][y2] = this.board[x1][y1];
+		this.board[x2][y2].hasMoved = true;
 		this.board[x1][y1] = null;
 		this.turn = (this.turn+1) % 2;
+		if (!this.fresh) 
+			this.passant = null;
 		return true;
 	},
 
@@ -127,7 +134,7 @@ var Game = {
 			return false;
 
 		var legal;
-		console.log("la testen begynne");
+		
 		switch (this.board[x1][y1].type) {
 			case PieceType.Rook:
 				legal = this.legalRook(dx, dy);
@@ -142,7 +149,7 @@ var Game = {
 				legal = this.legalKing(dx, dy);
 				break;
 			case PieceType.Pawn:
-				legal = this.legalPawn(dx, dy);
+				legal = this.legalPawn(sq1, sq2, piece1.hasMoved, piece2 == null);
 				break;
 			case PieceType.Knight:
 				return this.legalKnight(dx, dy);
@@ -179,11 +186,37 @@ var Game = {
 	},
 
 	legalQueen: function(dx, dy) {
-		return legalRook(dx, dy) || legalBishop(dx, dy);
+		return this.legalRook(dx, dy) || this.legalBishop(dx, dy);
 	},
 
-	legalPawn: function() {
-		return true;
+	legalPawn: function(sq1, sq2, hasMoved, clear) {
+		var [x1, y1] = this.coordinates(sq1);
+		var [x2, y2] = this.coordinates(sq2);
+		var dx = x2-x1;
+		var dy = y2-y1;
+		var direction = this.turn == Color.white ? 1 : -1;
+
+		if (dy == 0 && clear) {
+			if (dx == direction)
+				return true;
+			if (dx == direction*2 && !hasMoved) {
+				this.passant = y1+""+(x1+direction);
+				this.fresh = true;
+				return true;
+			}
+		}
+		
+		if (Math.abs(dy) == 1 && dx == direction){
+			if (!clear)
+				return true;
+			if (this.passant == y2+""+x2) {
+				//TODO: save capture and execute later in movePiece function
+				this.board[x2-direction][y2] = null;
+				return true;
+			}
+		} 
+		
+		return false;
 	},
 
 	/*
@@ -206,8 +239,28 @@ var Game = {
 		return false;
 
 	},
+	//lazy bruteforce
 	inCheck: function(color) {
+		var [x, y] = this.findKing(color);
+		var sq1 = String.fromCharCode(y) + (x+1);
+		var sq2;
+		for (var i=0; i < 8; i++)
+			for (var j=0; j < 8; j++)
+				if (this.board[i][j] != null && this.board[i][j].color != color) {
+					sq2 = String.fromCharCode(j) + (i+1);
+					if (this.legalMove(sq1, sq2)) //an opponents piece can attack king!!
+						return true;
+				}
+
 		return false;
+	},
+
+	findKing: function(color) {
+		for (var j=0; j < 8; j++) 
+			for (var i=0; i < 8; i++)
+				if (this.board[j][i] != null && this.board[j][i].type == PieceType.King && this.board[j][i].color == color)
+					return [j, i];
+		
 	},
 
 	printBoard: function() {
