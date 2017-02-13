@@ -3,14 +3,14 @@ import React from 'react';
 
 export class Chesspiece extends React.Component{
 	render(){
-		var name = {"Pawn","Queen","Bishop","Knight","Rook", "King"};
-		var color = {"Black", "White"};
 		var s = {
-			height: '60px',
-			width: 	'20px',
-			backgroundColor: 'black'
+			position: 'absolute',
+			left: '50%',
+			top: '50%',
+			transform: 'translate(-50%, -50%)',
+			display: 'inline-block',
 		}
-		return (<div style={s}>name</div>);
+		return (<div style={s}>{this.props.name}</div>);
 
 		}
 }
