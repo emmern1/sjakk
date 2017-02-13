@@ -48,7 +48,7 @@ var Brett = React.createClass({
 		else var b = null;//<Chesspiece type={this.state.brett[i]} />;
 
 
-		
+
 
 		return (<Rute farge={farge} key={i} brikke={b}/>);
 	},
@@ -76,6 +76,7 @@ var Brett = React.createClass({
 			</div>
 			);
 	}
+
 });
 
 
